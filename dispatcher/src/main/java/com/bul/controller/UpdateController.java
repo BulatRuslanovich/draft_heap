@@ -112,12 +112,10 @@ public class UpdateController {
     }
 
     private void processPhotoMessage(Update update) {
-        int sizeSum = 0;
-        for (var photo : update.getMessage().getPhoto()) {
-            sizeSum += photo.getFileSize();
-        }
+        var photoSize = update.getMessage().getPhoto().size();
+        var photoIndex = photoSize > 1 ? photoSize - 1 : 0;
 
-        if (sizeSum <= SIZE_LIMIT) {
+        if (update.getMessage().getPhoto().get(photoIndex).getFileSize() <= SIZE_LIMIT) {
             updateProducer.produce(PHOTO_MESSAGE_UPDATE, update);
         } else {
             setSizeLimitMessageView(update);
