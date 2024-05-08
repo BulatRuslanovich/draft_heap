@@ -98,10 +98,6 @@ public class UpdateController {
         telegramBot.sendAnswerMessage(sendMessage);
     }
 
-    public void setViewSticker(SendSticker sendSticker) {
-        telegramBot.sendAnswerSticker(sendSticker);
-    }
-
     private void processStickerMessage(Update update) {
         if (update.getMessage().getSticker().getFileSize() <= SIZE_LIMIT) {
             updateProducer.produce(STICKER_MESSAGE_UPDATE, update);

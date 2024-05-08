@@ -78,7 +78,7 @@ public class FileController {
 
         return ResponseEntity
                 .ok()
-                .contentType(MediaType.IMAGE_JPEG)
+                .contentType(MediaType.parseMediaType("video/webm"))
                 .header("Content-disposition", "attachment;")
                 .body(fileSystemResource);
     }

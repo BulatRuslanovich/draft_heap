@@ -8,6 +8,7 @@ import com.bul.entity.AppPhoto;
 import com.bul.entity.AppSticker;
 import com.bul.entity.AppUser;
 import com.bul.entity.RawData;
+import com.bul.enums.LinkType;
 import com.bul.enums.ServiceCommands;
 import com.bul.enums.UserState;
 import com.bul.exaptions.ExistStickerException;
@@ -18,15 +19,10 @@ import com.bul.service.ProducerService;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendSticker;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 
-import java.util.Optional;
-
 import static com.bul.enums.ServiceCommands.CANCEL;
-import static com.bul.enums.ServiceCommands.GET_STICKER;
 import static com.bul.enums.ServiceCommands.HELP;
 import static com.bul.enums.ServiceCommands.REGISTRATION;
 import static com.bul.enums.ServiceCommands.START;
@@ -39,14 +35,12 @@ public class MainServiceImpl implements MainService {
     private final RawDataDAO rawDataDAO;
     private final ProducerService producerService;
     private final AppUserDAO appUserDAO;
-    private final AppStickerDAO appStickerDAO;
     private final FileService fileService;
 
     public MainServiceImpl(RawDataDAO rawDataDAO, ProducerService producerService, AppUserDAO appUserDAO, AppStickerDAO appStickerDAO, FileService fileService) {
         this.rawDataDAO = rawDataDAO;
         this.producerService = producerService;
         this.appUserDAO = appUserDAO;
-        this.appStickerDAO = appStickerDAO;
         this.fileService = fileService;
     }
 
@@ -63,7 +57,7 @@ public class MainServiceImpl implements MainService {
         if (CANCEL.equals(serviceCommand)) {
             output = cancelProcess(appUser);
         } else if (BASIC_STATE.equals(state)) {
-            output = processServiceCommand(appUser, text, update.getMessage().getChatId());
+            output = processServiceCommand(appUser, text);
         } else if (WAIT_FOR_EMAIL_STATE.equals(state)) {
             //TODO: обработка емаила
         } else  {
@@ -87,8 +81,9 @@ public class MainServiceImpl implements MainService {
 
         try {
             AppDocument doc = fileService.processDoc(update.getMessage());
-
-            var answer = "Документ успешно загружен! Ссылка для скачивания: http://test.ru/get-doc/000";
+            var link = fileService.generateLink(doc.getId(), LinkType.GET_DOC);
+            var answer = "Документ успешно загружен! " +
+                    "Ссылка для скачивания: " + link;
             sendAnswer(answer, chatId);
         } catch (UploadFileException e) {
             log.error(e);
@@ -109,8 +104,9 @@ public class MainServiceImpl implements MainService {
 
         try {
             AppPhoto photo = fileService.processPhoto(update.getMessage());
-
-            var answer = "Фото успешно загружен! Ссылка для скачивания: http://test.ru/get-photo/000";
+            var link = fileService.generateLink(photo.getId(), LinkType.GET_PHOTO);
+            var answer = "Фото успешно загружен! " +
+                    "Ссылка для скачивания: " + link;
             sendAnswer(answer, chatId);
         } catch (UploadFileException e) {
             log.error(e);
@@ -132,8 +128,9 @@ public class MainServiceImpl implements MainService {
 
         try {
             AppSticker sticker = fileService.processSticker(update.getMessage());
-
-            var answer = "Стикер успешно загружен! Ссылка для скачивания: http://test.ru/get-sticker/000";
+            var link = fileService.generateLink(sticker.getId(), LinkType.GET_STICKER);
+            var answer = "Стикер успешно загружен! " +
+                    "Ссылка для скачивания: " + link;
             sendAnswer(answer, chatId);
         } catch (UploadFileException e) {
             log.error(e);
@@ -162,7 +159,7 @@ public class MainServiceImpl implements MainService {
         return false;
     }
 
-    private String processServiceCommand(AppUser appUser, String text, Long chatId) {
+    private String processServiceCommand(AppUser appUser, String text) {
         var serviceCommand = ServiceCommands.fromValue(text);
 
         if (REGISTRATION.equals(serviceCommand)) {
@@ -172,17 +169,6 @@ public class MainServiceImpl implements MainService {
             return help();
         } else if (START.equals(serviceCommand)) {
             return "Добрый день! Для просмотра списка команд введите /help";
-        } else if (GET_STICKER.equals(serviceCommand)) {
-            Optional<AppSticker> randomAppSticker = appStickerDAO.findRandomAppSticker();
-            if (randomAppSticker.isPresent()) {
-                String telegramStickerId = randomAppSticker.get().getTelegramFileId();
-                sendSticker(chatId, telegramStickerId);
-                return "";
-            } else {
-                return "Стикеров еще не завезли :(";
-            }
-
-
         } else {
             return "Такой команды нет, введите /help, чтобы узнать о доступных командах";
         }
@@ -193,9 +179,7 @@ public class MainServiceImpl implements MainService {
                 "/start - Начать взаимодействие\n" +
                 "/help - Показать список доступных команд\n" +
                 "/registration - Зарегистрироваться\n" +
-                "/get_sticker - Получить стикер\n" +
-                "/cancel - Отменить текущее действие\n" +
-                "Если у вас есть вопросы или нужна помощь, обращайтесь!";
+                "/cancel - Отменить текущее действие";
     }
 
     private String cancelProcess(AppUser appUser) {
@@ -210,14 +194,6 @@ public class MainServiceImpl implements MainService {
         sendMessage.setText(output);
         producerService.producerAnswer(sendMessage);
     }
-
-    private void sendSticker(Long chatId, String stickerId) {
-        var sendSticker = new SendSticker();
-        sendSticker.setChatId(chatId);
-        sendSticker.setSticker(new InputFile(stickerId));
-        producerService.producerSticker(sendSticker);
-    }
-
 
     private void saveRawData(Update update) {
         RawData rawData = RawData.builder()

@@ -22,8 +22,4 @@ public class ProducerServiceImpl implements ProducerService {
         rabbitTemplate.convertAndSend(ANSWER_MESSAGE, sendMessage);
     }
 
-    @Override
-    public void producerSticker(SendSticker sendSticker) {
-        rabbitTemplate.convertAndSend(STICKER_ANSWER_MESSAGE, sendSticker);
-    }
 }

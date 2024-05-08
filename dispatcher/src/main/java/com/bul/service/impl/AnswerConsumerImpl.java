@@ -24,11 +24,4 @@ public class AnswerConsumerImpl implements AnswerConsumer {
         updateController.setView(sendMessage);
     }
 
-    @Override
-    @RabbitListener(queues = STICKER_ANSWER_MESSAGE)
-    public void consumeSticker(SendSticker sendSticker) {
-        updateController.setViewSticker(sendSticker);
-    }
-
-
 }

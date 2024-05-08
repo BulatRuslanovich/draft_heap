@@ -60,14 +60,4 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.error(e.getMessage());
         }
     }
-
-    public void sendAnswerSticker(SendSticker sendSticker) {
-        try {
-            execute(sendSticker);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-
 }

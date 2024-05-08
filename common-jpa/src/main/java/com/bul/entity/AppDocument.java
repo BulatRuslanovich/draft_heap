@@ -30,21 +30,14 @@ public class AppDocument {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String telegramFileId;
-
     @ManyToOne
     private AppUser appUser;
-
     @OneToOne
     private BinaryContent binaryContent;
-
     private String docName;
-
     @CreationTimestamp
     private LocalDateTime loadDateTime;
-
     private String mimeType;
-
     private Long fileSize;
 }

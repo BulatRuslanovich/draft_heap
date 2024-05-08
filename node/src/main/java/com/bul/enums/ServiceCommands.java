@@ -4,8 +4,7 @@ public enum ServiceCommands {
     HELP("/help"),
     START("/start"),
     REGISTRATION("/registration"),
-    CANCEL("/cancel"),
-    GET_STICKER("/get_sticker");
+    CANCEL("/cancel");
 
     private final String value;
 

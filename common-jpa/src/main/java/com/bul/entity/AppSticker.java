@@ -30,24 +30,16 @@ public class AppSticker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String telegramFileId;
     private String telegramFileUniqueId;
-
     @ManyToOne
     private AppUser appUser;
-
     @OneToOne
     private BinaryContent binaryContent;
-
     @CreationTimestamp
     private LocalDateTime loadDateTime;
-
     private Integer fileSize;
-
     private Boolean isAnimated;
-
     private String emoji;
-
     private Boolean isVideo;
 }

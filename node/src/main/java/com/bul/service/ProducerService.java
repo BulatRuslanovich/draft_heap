@@ -5,5 +5,4 @@ import org.telegram.telegrambots.meta.api.methods.send.SendSticker;
 
 public interface ProducerService {
     void producerAnswer(SendMessage sendMessage);
-    void producerSticker(SendSticker sendSticker);
 }

@@ -1,14 +1,28 @@
 package com.bul.service.impl;
 
-import com.bul.dao.*;
-import com.bul.entity.*;
+import com.bul.dao.AppDocumentDAO;
+import com.bul.dao.AppPhotoDAO;
+import com.bul.dao.AppStickerDAO;
+import com.bul.dao.AppUserDAO;
+import com.bul.dao.BinaryContentDAO;
+import com.bul.entity.AppDocument;
+import com.bul.entity.AppPhoto;
+import com.bul.entity.AppSticker;
+import com.bul.entity.AppUser;
+import com.bul.entity.BinaryContent;
+import com.bul.enums.LinkType;
 import com.bul.exaptions.ExistStickerException;
 import com.bul.exaptions.UploadFileException;
 import com.bul.service.FileService;
+import com.bul.utils.CryptoTool;
 import lombok.extern.log4j.Log4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.meta.api.objects.Document;
@@ -36,18 +50,23 @@ public class FileServiceImpl implements FileService {
     @Value("${service.file_storage.uri}")
     private String fileStorageUri;
 
+    @Value("${link.address}")
+    private String linkAddress;
+
     private final AppDocumentDAO appDocumentDAO;
     private final AppPhotoDAO appPhotoDAO;
     private final AppStickerDAO appStickerDAO;
     private final BinaryContentDAO binaryContentDAO;
     private final AppUserDAO appUserDAO;
+    private final CryptoTool cryptoTool;
 
-    public FileServiceImpl(AppDocumentDAO appDocumentDAO, AppPhotoDAO appPhotoDAO, AppStickerDAO appStickerDAO, BinaryContentDAO binaryContentDAO, AppUserDAO appUserDAO) {
+    public FileServiceImpl(AppDocumentDAO appDocumentDAO, AppPhotoDAO appPhotoDAO, AppStickerDAO appStickerDAO, BinaryContentDAO binaryContentDAO, AppUserDAO appUserDAO, CryptoTool cryptoTool) {
         this.appDocumentDAO = appDocumentDAO;
         this.appPhotoDAO = appPhotoDAO;
         this.appStickerDAO = appStickerDAO;
         this.binaryContentDAO = binaryContentDAO;
         this.appUserDAO = appUserDAO;
+        this.cryptoTool = cryptoTool;
     }
 
     @Override
@@ -89,17 +108,9 @@ public class FileServiceImpl implements FileService {
     public AppSticker processSticker(Message telegramMessage) {
         var telegramSticker = telegramMessage.getSticker();
         var fileId = telegramSticker.getFileId();
-        var fileUniqueId = telegramSticker.getFileUniqueId();
-
-        Optional<AppSticker> appSticker = appStickerDAO.findByTelegramFileUniqueId(fileUniqueId);
-
-        if (appSticker.isPresent()) {
-            throw new ExistStickerException("This sticker is exists: " + appSticker.get().getTelegramFileId(), appSticker.get().getAppUser().getUsername());
-        }
-
         AppUser user = getAppUser(telegramMessage);
-
         var response = getFilePath(fileId);
+
         if (response.getStatusCode() == HttpStatus.OK) {
             var persistentBinaryContent = getPersistentBinaryContent(response);
             var transientAppSticker = buildTransientAppSticker(telegramSticker, persistentBinaryContent, user);
@@ -108,7 +119,6 @@ public class FileServiceImpl implements FileService {
             throw new UploadFileException("Bad response from telegram service: " + response);
         }
     }
-
 
 
     private AppUser getAppUser(Message telegramMessage) {
@@ -207,6 +217,11 @@ public class FileServiceImpl implements FileService {
                 .build();
     }
 
+    @Override
+    public String generateLink(Long docId, LinkType linkType) {
+        var hash = cryptoTool.hashOf(docId);
+        return "http://" + linkAddress + "/" + linkType + "?id="  + hash;
+    }
 
 
 }

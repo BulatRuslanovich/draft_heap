@@ -45,9 +45,4 @@ public class RabbitConfig {
     public Queue answerQueue() {
         return new Queue(ANSWER_MESSAGE);
     }
-
-    @Bean
-    public Queue answerStickerQueue() {
-        return new Queue(STICKER_ANSWER_MESSAGE);
-    }
 }

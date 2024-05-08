@@ -30,17 +30,12 @@ public class AppPhoto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String telegramFileId;
-
     @ManyToOne
     private AppUser appUser;
-
     @OneToOne
     private BinaryContent binaryContent;
-
     @CreationTimestamp
     private LocalDateTime loadDateTime;
-
     private Integer fileSize;
 }
