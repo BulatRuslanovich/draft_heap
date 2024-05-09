@@ -11,7 +11,7 @@ import com.bul.entity.AppSticker;
 import com.bul.entity.AppUser;
 import com.bul.entity.BinaryContent;
 import com.bul.enums.LinkType;
-import com.bul.exaptions.ExistStickerException;
+import com.bul.exaptions.UnknownUserException;
 import com.bul.exaptions.UploadFileException;
 import com.bul.service.FileService;
 import com.bul.utils.CryptoTool;
@@ -43,16 +43,12 @@ import java.util.Optional;
 public class FileServiceImpl implements FileService {
     @Value("${token}")
     private String token;
-    // https://api.telegram.org/bot{bot_token}/sendSticker?chat_id={chat_id}&sticker={sticker}
     @Value("${service.file_info.uri}")
     private String fileInfoUri;
-
     @Value("${service.file_storage.uri}")
     private String fileStorageUri;
-
     @Value("${link.address}")
     private String linkAddress;
-
     private final AppDocumentDAO appDocumentDAO;
     private final AppPhotoDAO appPhotoDAO;
     private final AppStickerDAO appStickerDAO;
@@ -73,12 +69,16 @@ public class FileServiceImpl implements FileService {
     public AppDocument processDoc(Message telegramMessage) {
         var telegramDoc = telegramMessage.getDocument();
         var fileId = telegramDoc.getFileId();
-        AppUser user = getAppUser(telegramMessage);
+        Optional<AppUser> user = getAppUser(telegramMessage);
+
+        if (user.isEmpty()) {
+            throw new UnknownUserException("The user is not in the database: " +  telegramMessage.getFrom().getUserName());
+        }
 
         var response = getFilePath(fileId);
         if (response.getStatusCode() == HttpStatus.OK) {
             var persistentBinaryContent = getPersistentBinaryContent(response);
-            var transientAppDoc = buildTransientAppDoc(telegramDoc, persistentBinaryContent, user);
+            var transientAppDoc = buildTransientAppDoc(telegramDoc, persistentBinaryContent, user.get());
             return appDocumentDAO.save(transientAppDoc);
         } else {
             throw new UploadFileException("Bad response from telegram service: " + response);
@@ -92,12 +92,16 @@ public class FileServiceImpl implements FileService {
 
         var telegramPhoto = telegramMessage.getPhoto().get(photoIndex);
         var fileId = telegramPhoto.getFileId();
-        AppUser user = getAppUser(telegramMessage);
+        Optional<AppUser> user = getAppUser(telegramMessage);
+
+        if (user.isEmpty()) {
+            throw new UnknownUserException("The user is not in the database: " +  telegramMessage.getFrom().getUserName());
+        }
 
         var response = getFilePath(fileId);
         if (response.getStatusCode() == HttpStatus.OK) {
             var persistentBinaryContent = getPersistentBinaryContent(response);
-            var transientAppPhoto = buildTransientAppPhoto(telegramPhoto, persistentBinaryContent, user);
+            var transientAppPhoto = buildTransientAppPhoto(telegramPhoto, persistentBinaryContent, user.get());
             return appPhotoDAO.save(transientAppPhoto);
         } else {
             throw new UploadFileException("Bad response from telegram service: " + response);
@@ -108,12 +112,16 @@ public class FileServiceImpl implements FileService {
     public AppSticker processSticker(Message telegramMessage) {
         var telegramSticker = telegramMessage.getSticker();
         var fileId = telegramSticker.getFileId();
-        AppUser user = getAppUser(telegramMessage);
-        var response = getFilePath(fileId);
+        Optional<AppUser> user = getAppUser(telegramMessage);
 
+        if (user.isEmpty()) {
+            throw new UnknownUserException("The user is not in the database: " +  telegramMessage.getFrom().getUserName());
+        }
+
+        var response = getFilePath(fileId);
         if (response.getStatusCode() == HttpStatus.OK) {
             var persistentBinaryContent = getPersistentBinaryContent(response);
-            var transientAppSticker = buildTransientAppSticker(telegramSticker, persistentBinaryContent, user);
+            var transientAppSticker = buildTransientAppSticker(telegramSticker, persistentBinaryContent, user.get());
             return appStickerDAO.save(transientAppSticker);
         } else {
             throw new UploadFileException("Bad response from telegram service: " + response);
@@ -121,9 +129,9 @@ public class FileServiceImpl implements FileService {
     }
 
 
-    private AppUser getAppUser(Message telegramMessage) {
+    private Optional<AppUser> getAppUser(Message telegramMessage) {
         var userId = telegramMessage.getFrom().getId();
-        return appUserDAO.findAppUserByTelegramUserId(userId);
+        return appUserDAO.findByTelegramUserId(userId);
     }
 
     private BinaryContent getPersistentBinaryContent(ResponseEntity<String> response) {

@@ -11,8 +11,9 @@ import com.bul.entity.RawData;
 import com.bul.enums.LinkType;
 import com.bul.enums.ServiceCommands;
 import com.bul.enums.UserState;
-import com.bul.exaptions.ExistStickerException;
+import com.bul.exaptions.UnknownUserException;
 import com.bul.exaptions.UploadFileException;
+import com.bul.service.AppUserService;
 import com.bul.service.FileService;
 import com.bul.service.MainService;
 import com.bul.service.ProducerService;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+
+import java.util.Optional;
 
 import static com.bul.enums.ServiceCommands.CANCEL;
 import static com.bul.enums.ServiceCommands.HELP;
@@ -36,12 +39,14 @@ public class MainServiceImpl implements MainService {
     private final ProducerService producerService;
     private final AppUserDAO appUserDAO;
     private final FileService fileService;
+    private final AppUserService appUserService;
 
-    public MainServiceImpl(RawDataDAO rawDataDAO, ProducerService producerService, AppUserDAO appUserDAO, AppStickerDAO appStickerDAO, FileService fileService) {
+    public MainServiceImpl(RawDataDAO rawDataDAO, ProducerService producerService, AppUserDAO appUserDAO, AppStickerDAO appStickerDAO, FileService fileService, AppUserService appUserService) {
         this.rawDataDAO = rawDataDAO;
         this.producerService = producerService;
         this.appUserDAO = appUserDAO;
         this.fileService = fileService;
+        this.appUserService = appUserService;
     }
 
     @Override
@@ -59,7 +64,7 @@ public class MainServiceImpl implements MainService {
         } else if (BASIC_STATE.equals(state)) {
             output = processServiceCommand(appUser, text);
         } else if (WAIT_FOR_EMAIL_STATE.equals(state)) {
-            //TODO: обработка емаила
+            output = appUserService.setEmail(appUser, text);
         } else  {
             log.error("Unknown user state: " + state);
             output = "Unknown user state";
@@ -136,9 +141,9 @@ public class MainServiceImpl implements MainService {
             log.error(e);
             String error = "К сожалению, загрузка стикера не удалась. Повторите попытку позже.";
             sendAnswer(error, chatId);
-        } catch (ExistStickerException e) {
+        } catch (UnknownUserException e) {
             log.error(e);
-            String error = "К сожалению, такой стикер уже есть, его добавил " + e.getUsername();
+            String error = "К сожалению, вас нет в наших списках, ваше документ не может быть загружен :(";
             sendAnswer(error, chatId);
         }
     }
@@ -163,8 +168,7 @@ public class MainServiceImpl implements MainService {
         var serviceCommand = ServiceCommands.fromValue(text);
 
         if (REGISTRATION.equals(serviceCommand)) {
-            //TODO: сделать регистрацию
-            return "Еще не готово...";
+            return appUserService.registerUser(appUser);
         } else if (HELP.equals(serviceCommand)) {
             return help();
         } else if (START.equals(serviceCommand)) {
@@ -205,22 +209,21 @@ public class MainServiceImpl implements MainService {
 
     private AppUser findOrSaveAppUser(Update update) {
         User telegramUser = update.getMessage().getFrom();
-        AppUser persistentAppUser = appUserDAO.findAppUserByTelegramUserId(telegramUser.getId());
+        Optional<AppUser> optional = appUserDAO.findByTelegramUserId(telegramUser.getId());
 
-        if (persistentAppUser == null) {
+        if (optional.isEmpty()) {
             AppUser transientAppUser = AppUser.builder()
                     .telegramUserId(telegramUser.getId())
                     .username(telegramUser.getUserName())
                     .firstname(telegramUser.getFirstName())
                     .lastname(telegramUser.getLastName())
-                    //todo: надо будет потом реализовать логику регистации, а пока всегда тру
-                    .isActive(true)
+                    .isActive(false)
                     .userState(BASIC_STATE)
                     .build();
 
             return appUserDAO.save(transientAppUser);
         }
 
-        return persistentAppUser;
+        return optional.get();
     }
 }
