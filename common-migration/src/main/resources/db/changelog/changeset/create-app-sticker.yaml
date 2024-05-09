@@ -1,0 +1,65 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-app-sticker
+      author: getName
+      changes:
+        - createTable:
+            tableName: app_sticker
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: telegram_file_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: telegram_file_unique_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: app_user_id
+                  type: bigint
+                  constraints:
+                    foreignKeyName: app_user_app_sticker_fk
+                    referencedTableName: app_user
+                    referencedColumnNames: id
+              - column:
+                  name: binary_content_id
+                  type: bigint
+                  constraints:
+                    foreignKeyName: binary_content_app_sticker_fk
+                    referencedTableName: binary_content
+                    referencedColumnNames: id
+              - column:
+                  name: load_date_time
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_size
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_animated
+                  type: boolean
+                  constraints:
+                    nullable: false
+              - column:
+                  name: emoji
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_video
+                  type: boolean
+                  constraints:
+                    nullable: false

@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changeset/create-binary-content.yaml
+  - include:
+      file: db/changelog/changeset/create-app-user.yaml
+  - include:
+      file: db/changelog/changeset/create-app-document.yaml
+  - include:
+      file: db/changelog/changeset/create-app-photo.yaml
+  - include:
+      file: db/changelog/changeset/create-app-sticker.yaml

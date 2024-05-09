@@ -2,12 +2,10 @@ package com.bul.service.impl;
 
 import com.bul.dao.AppStickerDAO;
 import com.bul.dao.AppUserDAO;
-import com.bul.dao.RawDataDAO;
 import com.bul.entity.AppDocument;
 import com.bul.entity.AppPhoto;
 import com.bul.entity.AppSticker;
 import com.bul.entity.AppUser;
-import com.bul.entity.RawData;
 import com.bul.enums.LinkType;
 import com.bul.enums.ServiceCommands;
 import com.bul.enums.UserState;
@@ -35,14 +33,12 @@ import static com.bul.enums.UserState.WAIT_FOR_EMAIL_STATE;
 @Log4j
 @Service
 public class MainServiceImpl implements MainService {
-    private final RawDataDAO rawDataDAO;
     private final ProducerService producerService;
     private final AppUserDAO appUserDAO;
     private final FileService fileService;
     private final AppUserService appUserService;
 
-    public MainServiceImpl(RawDataDAO rawDataDAO, ProducerService producerService, AppUserDAO appUserDAO, AppStickerDAO appStickerDAO, FileService fileService, AppUserService appUserService) {
-        this.rawDataDAO = rawDataDAO;
+    public MainServiceImpl(ProducerService producerService, AppUserDAO appUserDAO, AppStickerDAO appStickerDAO, FileService fileService, AppUserService appUserService) {
         this.producerService = producerService;
         this.appUserDAO = appUserDAO;
         this.fileService = fileService;
@@ -51,7 +47,6 @@ public class MainServiceImpl implements MainService {
 
     @Override
     public void processTextMessage(Update update) {
-        saveRawData(update);
         var appUser = findOrSaveAppUser(update);
         UserState state = appUser.getUserState();
         var text = update.getMessage().getText();
@@ -76,7 +71,6 @@ public class MainServiceImpl implements MainService {
 
     @Override
     public void processDocMessage(Update update) {
-        saveRawData(update);
         var appUser = findOrSaveAppUser(update);
         var chatId = update.getMessage().getChatId();
 
@@ -99,7 +93,6 @@ public class MainServiceImpl implements MainService {
 
     @Override
     public void processPhotoMessage(Update update) {
-        saveRawData(update);
         var appUser = findOrSaveAppUser(update);
         var chatId = update.getMessage().getChatId();
 
@@ -122,7 +115,6 @@ public class MainServiceImpl implements MainService {
 
     @Override
     public void processStickerMessage(Update update) {
-        saveRawData(update);
         var appUser = findOrSaveAppUser(update);
         var chatId = update.getMessage().getChatId();
 
@@ -197,14 +189,6 @@ public class MainServiceImpl implements MainService {
         sendMessage.setChatId(chatId);
         sendMessage.setText(output);
         producerService.producerAnswer(sendMessage);
-    }
-
-    private void saveRawData(Update update) {
-        RawData rawData = RawData.builder()
-                .update(update)
-                .build();
-
-        rawDataDAO.save(rawData);
     }
 
     private AppUser findOrSaveAppUser(Update update) {
