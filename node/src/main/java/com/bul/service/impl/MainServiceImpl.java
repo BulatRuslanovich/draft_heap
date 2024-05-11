@@ -1,6 +1,5 @@
 package com.bul.service.impl;
 
-import com.bul.dao.AppStickerDAO;
 import com.bul.dao.AppUserDAO;
 import com.bul.entity.AppDocument;
 import com.bul.entity.AppPhoto;
@@ -15,6 +14,7 @@ import com.bul.service.AppUserService;
 import com.bul.service.FileService;
 import com.bul.service.MainService;
 import com.bul.service.ProducerService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -31,6 +31,7 @@ import static com.bul.enums.UserState.BASIC_STATE;
 import static com.bul.enums.UserState.WAIT_FOR_EMAIL_STATE;
 
 @Log4j
+@RequiredArgsConstructor
 @Service
 public class MainServiceImpl implements MainService {
     private final ProducerService producerService;
@@ -38,17 +39,10 @@ public class MainServiceImpl implements MainService {
     private final FileService fileService;
     private final AppUserService appUserService;
 
-    public MainServiceImpl(ProducerService producerService, AppUserDAO appUserDAO, AppStickerDAO appStickerDAO, FileService fileService, AppUserService appUserService) {
-        this.producerService = producerService;
-        this.appUserDAO = appUserDAO;
-        this.fileService = fileService;
-        this.appUserService = appUserService;
-    }
-
     @Override
     public void processTextMessage(Update update) {
         var appUser = findOrSaveAppUser(update);
-        UserState state = appUser.getUserState();
+        var state = appUser.getUserState();
         var text = update.getMessage().getText();
 
         var output = "";
@@ -86,7 +80,7 @@ public class MainServiceImpl implements MainService {
             sendAnswer(answer, chatId);
         } catch (UploadFileException e) {
             log.error(e);
-            String error = "К сожалению, загрузка файла не удалась. Повторите попытку позже.";
+            var error = "К сожалению, загрузка файла не удалась. Повторите попытку позже.";
             sendAnswer(error, chatId);
         }
     }
@@ -101,14 +95,14 @@ public class MainServiceImpl implements MainService {
         }
 
         try {
-            AppPhoto photo = fileService.processPhoto(update.getMessage());
+            var photo = fileService.processPhoto(update.getMessage());
             var link = fileService.generateLink(photo.getId(), LinkType.GET_PHOTO);
             var answer = "Фото успешно загружен! " +
                     "Ссылка для скачивания: " + link;
             sendAnswer(answer, chatId);
         } catch (UploadFileException e) {
             log.error(e);
-            String error = "К сожалению, загрузка файла не удалась. Повторите попытку позже.";
+            var error = "К сожалению, загрузка файла не удалась. Повторите попытку позже.";
             sendAnswer(error, chatId);
         }
     }
@@ -124,18 +118,18 @@ public class MainServiceImpl implements MainService {
 
 
         try {
-            AppSticker sticker = fileService.processSticker(update.getMessage());
+            var sticker = fileService.processSticker(update.getMessage());
             var link = fileService.generateLink(sticker.getId(), LinkType.GET_STICKER);
             var answer = "Стикер успешно загружен! " +
                     "Ссылка для скачивания: " + link;
             sendAnswer(answer, chatId);
         } catch (UploadFileException e) {
             log.error(e);
-            String error = "К сожалению, загрузка стикера не удалась. Повторите попытку позже.";
+            var error = "К сожалению, загрузка стикера не удалась. Повторите попытку позже.";
             sendAnswer(error, chatId);
         } catch (UnknownUserException e) {
             log.error(e);
-            String error = "К сожалению, вас нет в наших списках, ваше документ не может быть загружен :(";
+            var error = "К сожалению, вас нет в наших списках, ваше документ не может быть загружен :(";
             sendAnswer(error, chatId);
         }
     }
@@ -192,8 +186,8 @@ public class MainServiceImpl implements MainService {
     }
 
     private AppUser findOrSaveAppUser(Update update) {
-        User telegramUser = update.getMessage().getFrom();
-        Optional<AppUser> optional = appUserDAO.findByTelegramUserId(telegramUser.getId());
+        var telegramUser = update.getMessage().getFrom();
+        var optional = appUserDAO.findByTelegramUserId(telegramUser.getId());
 
         if (optional.isEmpty()) {
             AppUser transientAppUser = AppUser.builder()

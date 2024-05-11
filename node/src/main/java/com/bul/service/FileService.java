@@ -10,6 +10,5 @@ public interface FileService {
     AppDocument processDoc(Message telegramMessage);
     AppPhoto processPhoto(Message telegramMessage);
     AppSticker processSticker(Message telegramMessage);
-
     String generateLink(Long docId, LinkType linkType);
 }

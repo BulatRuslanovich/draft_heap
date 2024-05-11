@@ -9,15 +9,8 @@ public class MessageUtils {
     public SendMessage generateSendMessageWithText(Update update, String text) {
         var message = update.getMessage();
         var sendMessage = new SendMessage();
-
-        if (message != null) {
-            sendMessage.setChatId(message.getChatId());
-            sendMessage.setText(text);
-        } else {
-            sendMessage.setChatId(update.getEditedMessage().getChatId());
-            sendMessage.setText(text);
-        }
-
+        sendMessage.setChatId(message.getChatId());
+        sendMessage.setText(text);
         return sendMessage;
     }
 }

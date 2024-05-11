@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-email-index-app-user
+      author: getName
+      changes:
+        - createIndex:
+            indexName: email_index
+            tableName: app_user
+            columns:
+              - column:
+                  name: email
+                  type: varchar(255)

@@ -15,6 +15,11 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <common-jpa.version>1.0-SNAPSHOT</common-jpa.version>
+        <common-migration.version>1.0-SNAPSHOT</common-migration.version>
+        <common-utils.version>1.0-SNAPSHOT</common-utils.version>
+        <mail.version>1.4</mail.version>
+        <json.version>20220320</json.version>
     </properties>
 
 
@@ -28,12 +33,6 @@
             <groupId>org.telegram</groupId>
             <artifactId>telegrambots-spring-boot-starter</artifactId>
             <version>${telegram.starter.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.bul</groupId>
-            <artifactId>common-rabbitmq</artifactId>
-            <version>1.0-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -56,33 +55,32 @@
         <dependency>
             <groupId>com.bul</groupId>
             <artifactId>common-jpa</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${common-jpa.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.bul</groupId>
             <artifactId>common-migration</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${common-migration.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.bul</groupId>
             <artifactId>common-utils</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${common-utils.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20220320</version>
+            <version>${json.version}</version>
         </dependency>
 
         <dependency>
             <groupId>javax.mail</groupId>
             <artifactId>mail</artifactId>
-            <version>1.4</version>
+            <version>${mail.version}</version>
         </dependency>
-
     </dependencies>
 
 </project>

@@ -6,28 +6,25 @@ import com.bul.entity.AppUser;
 import com.bul.enums.UserState;
 import com.bul.service.AppUserService;
 import com.bul.utils.CryptoTool;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
 @Log4j
+@RequiredArgsConstructor
 @Service
 public class AppUserServiceImpl implements AppUserService {
     private final AppUserDAO appUserDAO;
     private final CryptoTool cryptoTool;
-    @Value("${service.mail.uri}")
-    private String mailServiceUri;
 
+    @Value("${spring.rabbitmq.queues.registration-mail}")
+    private String registrationMailQueue;
 
-    public AppUserServiceImpl(AppUserDAO appUserDAO, CryptoTool cryptoTool) {
-        this.appUserDAO = appUserDAO;
-        this.cryptoTool = cryptoTool;
-    }
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     public String registerUser(AppUser appUser) {
@@ -36,7 +33,6 @@ public class AppUserServiceImpl implements AppUserService {
         } else if (appUser.getEmail() != null) {
             return "Вам на почту уже было отправлено письмо. " +
                     "Если не нашли, оно может находиться в спаме";
-            //TODO: можно реализовать переотправку письма
         }
 
         appUser.setUserState(UserState.WAIT_FOR_EMAIL_STATE);
@@ -47,52 +43,36 @@ public class AppUserServiceImpl implements AppUserService {
     @Override
     public String setEmail(AppUser appUser, String email) {
         try {
-            InternetAddress emailAddress = new InternetAddress(email);
+            var emailAddress = new InternetAddress(email);
             emailAddress.validate();
         } catch (AddressException e) {
             return "Введите, пожалуйста, корректный email. Для отмены команды введите /cancel";
         }
 
-        var optional = appUserDAO.findByEmail(email);
+        var appUserOpt = appUserDAO.findByEmail(email);
 
-        if (optional.isEmpty()) {
+        if (appUserOpt.isEmpty()) {
             appUser.setEmail(email);
             appUser.setUserState(UserState.BASIC_STATE);
             appUser = appUserDAO.save(appUser);
 
             var cryptoUserId = cryptoTool.hashOf(appUser.getId());
-            var response = sendRequestToMailService(cryptoUserId, email);
+            sendRegistrationMail(cryptoUserId, email);
 
-            if (response.getStatusCode() != HttpStatus.OK) {
-                var error = String.format("Отправка эл. письма на почту %s не удалась.", email);
-                log.error(error);
-                appUser.setEmail(null);
-                appUserDAO.save(appUser);
-                return error;
-            }
-
-            return "Вам на почту было отправлено письмо. " +
-                    "Перейдите по ссылке в письме для подтверждения регистрации.";
+            return "Вам на почту было отправлено письмо."
+                    + "Перейдите по ссылке в письме для подтверждения регистрации.";
         } else {
             return "Этот email уже занят. Введите другой email." +
                     " Для отмены команды введите /cancel";
         }
     }
 
-    private ResponseEntity<String> sendRequestToMailService(String cryptoUserId, String email) {
-        var restTemplate = new RestTemplate();
-        var headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    private void sendRegistrationMail(String cryptoUserId, String email) {
         var mailParams = MailParams.builder()
                 .id(cryptoUserId)
                 .emailTo(email)
                 .build();
-        var request = new HttpEntity<>(mailParams, headers);
-        return restTemplate.exchange(
-                mailServiceUri,
-                HttpMethod.POST,
-                request,
-                String.class
-        );
+
+        rabbitTemplate.convertAndSend(registrationMailQueue, mailParams);
     }
 }

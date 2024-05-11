@@ -16,10 +16,10 @@ target/
 logs
 
 ### properties ###
-dispatcher/src/main/resources/application.properties
-node/src/main/resources/application.properties
-rest-service/src/main/resources/application.properties
-mail-service/src/main/resources/application.properties
+dispatcher/src/main/resources/application.yaml
+node/src/main/resources/application.yaml
+rest-service/src/main/resources/application.yaml
+mail-service/src/main/resources/application.yaml
 
 
 ### Eclipse ###

@@ -15,6 +15,7 @@ import com.bul.exaptions.UnknownUserException;
 import com.bul.exaptions.UploadFileException;
 import com.bul.service.FileService;
 import com.bul.utils.CryptoTool;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Log4j
+@RequiredArgsConstructor
 @Service
 public class FileServiceImpl implements FileService {
     @Value("${token}")
@@ -49,6 +51,7 @@ public class FileServiceImpl implements FileService {
     private String fileStorageUri;
     @Value("${link.address}")
     private String linkAddress;
+
     private final AppDocumentDAO appDocumentDAO;
     private final AppPhotoDAO appPhotoDAO;
     private final AppStickerDAO appStickerDAO;
@@ -56,29 +59,20 @@ public class FileServiceImpl implements FileService {
     private final AppUserDAO appUserDAO;
     private final CryptoTool cryptoTool;
 
-    public FileServiceImpl(AppDocumentDAO appDocumentDAO, AppPhotoDAO appPhotoDAO, AppStickerDAO appStickerDAO, BinaryContentDAO binaryContentDAO, AppUserDAO appUserDAO, CryptoTool cryptoTool) {
-        this.appDocumentDAO = appDocumentDAO;
-        this.appPhotoDAO = appPhotoDAO;
-        this.appStickerDAO = appStickerDAO;
-        this.binaryContentDAO = binaryContentDAO;
-        this.appUserDAO = appUserDAO;
-        this.cryptoTool = cryptoTool;
-    }
-
     @Override
     public AppDocument processDoc(Message telegramMessage) {
         var telegramDoc = telegramMessage.getDocument();
         var fileId = telegramDoc.getFileId();
-        Optional<AppUser> user = getAppUser(telegramMessage);
+        var userOpt = getAppUser(telegramMessage);
 
-        if (user.isEmpty()) {
+        if (userOpt.isEmpty()) {
             throw new UnknownUserException("The user is not in the database: " +  telegramMessage.getFrom().getUserName());
         }
 
         var response = getFilePath(fileId);
         if (response.getStatusCode() == HttpStatus.OK) {
             var persistentBinaryContent = getPersistentBinaryContent(response);
-            var transientAppDoc = buildTransientAppDoc(telegramDoc, persistentBinaryContent, user.get());
+            var transientAppDoc = buildTransientAppDoc(telegramDoc, persistentBinaryContent, userOpt.get());
             return appDocumentDAO.save(transientAppDoc);
         } else {
             throw new UploadFileException("Bad response from telegram service: " + response);
@@ -92,16 +86,16 @@ public class FileServiceImpl implements FileService {
 
         var telegramPhoto = telegramMessage.getPhoto().get(photoIndex);
         var fileId = telegramPhoto.getFileId();
-        Optional<AppUser> user = getAppUser(telegramMessage);
+        var userOpt = getAppUser(telegramMessage);
 
-        if (user.isEmpty()) {
+        if (userOpt.isEmpty()) {
             throw new UnknownUserException("The user is not in the database: " +  telegramMessage.getFrom().getUserName());
         }
 
         var response = getFilePath(fileId);
         if (response.getStatusCode() == HttpStatus.OK) {
             var persistentBinaryContent = getPersistentBinaryContent(response);
-            var transientAppPhoto = buildTransientAppPhoto(telegramPhoto, persistentBinaryContent, user.get());
+            var transientAppPhoto = buildTransientAppPhoto(telegramPhoto, persistentBinaryContent, userOpt.get());
             return appPhotoDAO.save(transientAppPhoto);
         } else {
             throw new UploadFileException("Bad response from telegram service: " + response);
@@ -112,16 +106,16 @@ public class FileServiceImpl implements FileService {
     public AppSticker processSticker(Message telegramMessage) {
         var telegramSticker = telegramMessage.getSticker();
         var fileId = telegramSticker.getFileId();
-        Optional<AppUser> user = getAppUser(telegramMessage);
+        var userOpt = getAppUser(telegramMessage);
 
-        if (user.isEmpty()) {
+        if (userOpt.isEmpty()) {
             throw new UnknownUserException("The user is not in the database: " +  telegramMessage.getFrom().getUserName());
         }
 
         var response = getFilePath(fileId);
         if (response.getStatusCode() == HttpStatus.OK) {
             var persistentBinaryContent = getPersistentBinaryContent(response);
-            var transientAppSticker = buildTransientAppSticker(telegramSticker, persistentBinaryContent, user.get());
+            var transientAppSticker = buildTransientAppSticker(telegramSticker, persistentBinaryContent, userOpt.get());
             return appStickerDAO.save(transientAppSticker);
         } else {
             throw new UploadFileException("Bad response from telegram service: " + response);
@@ -163,8 +157,6 @@ public class FileServiceImpl implements FileService {
                 .getJSONObject("result")
                 .getString("file_path"));
     }
-
-
 
     private byte[] downloadFile(String filePath) {
         var fullUri = fileStorageUri.replace("{token}", token)
@@ -228,8 +220,6 @@ public class FileServiceImpl implements FileService {
     @Override
     public String generateLink(Long docId, LinkType linkType) {
         var hash = cryptoTool.hashOf(docId);
-        return "http://" + linkAddress + "/" + linkType + "?id="  + hash;
+        return linkAddress + "/" + linkType + "?id="  + hash;
     }
-
-
 }

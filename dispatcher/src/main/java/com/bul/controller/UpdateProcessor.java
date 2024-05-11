@@ -1,30 +1,24 @@
 package com.bul.controller;
 
+import com.bul.configuration.RabbitConfig;
 import com.bul.service.UpdateProducer;
 import com.bul.utils.MessageUtils;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendSticker;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-import static com.bul.RabbitQueue.DOC_MESSAGE_UPDATE;
-import static com.bul.RabbitQueue.PHOTO_MESSAGE_UPDATE;
-import static com.bul.RabbitQueue.STICKER_MESSAGE_UPDATE;
-import static com.bul.RabbitQueue.TEXT_MESSAGE_UPDATE;
-
-@Component
 @Log4j
-public class UpdateController {
+@RequiredArgsConstructor
+@Component
+public class UpdateProcessor {
     private TelegramBot telegramBot;
     private final MessageUtils messageUtils;
     private final UpdateProducer updateProducer;
-    private final int SIZE_LIMIT = 10_485_760;
+    private final RabbitConfig rabbitConfig;
 
-    public UpdateController(MessageUtils messageUtils, UpdateProducer updateProducer) {
-        this.messageUtils = messageUtils;
-        this.updateProducer = updateProducer;
-    }
+    private final int SIZE_LIMIT = 10_485_760;
 
     public void registerBot(TelegramBot telegramBot) {
         this.telegramBot = telegramBot;
@@ -43,25 +37,6 @@ public class UpdateController {
         }
     }
 
-    public void _processEditMessage(Update update) {
-        if (update == null) {
-            log.error("Update is null");
-            return;
-        }
-
-        if (update.hasEditedMessage()) {
-            log.debug("Edited: " + update.getEditedMessage().getText());
-            setEditAnswer(update);
-        } else {
-            log.error("Edited message is null");
-        }
-
-    }
-
-    private void setEditAnswer(Update update) {
-        var sendMessage = messageUtils.generateSendMessageWithText(update, "Че меняем письма?");
-        setView(sendMessage);
-    }
 
     private void distributeMessageByType(Update update) {
         var message = update.getMessage();
@@ -100,7 +75,7 @@ public class UpdateController {
 
     private void processStickerMessage(Update update) {
         if (update.getMessage().getSticker().getFileSize() <= SIZE_LIMIT) {
-            updateProducer.produce(STICKER_MESSAGE_UPDATE, update);
+            updateProducer.produce(rabbitConfig.getStickerMessageUpdateQueue(), update);
         } else {
             setSizeLimitMessageView(update);
         }
@@ -112,7 +87,7 @@ public class UpdateController {
         var photoIndex = photoSize > 1 ? photoSize - 1 : 0;
 
         if (update.getMessage().getPhoto().get(photoIndex).getFileSize() <= SIZE_LIMIT) {
-            updateProducer.produce(PHOTO_MESSAGE_UPDATE, update);
+            updateProducer.produce(rabbitConfig.getPhotoMessageUpdateQueue(), update);
         } else {
             setSizeLimitMessageView(update);
         }
@@ -120,15 +95,13 @@ public class UpdateController {
 
     private void processDocMessage(Update update) {
         if (update.getMessage().getDocument().getFileSize() <= SIZE_LIMIT) {
-            updateProducer.produce(DOC_MESSAGE_UPDATE, update);
+            updateProducer.produce(rabbitConfig.getDocMessageUpdateQueue(), update);
         } else {
             setSizeLimitMessageView(update);
         }
     }
 
     private void processTextMessage(Update update) {
-        updateProducer.produce(TEXT_MESSAGE_UPDATE, update);
+        updateProducer.produce(rabbitConfig.getTextMessageUpdateQueue(), update);
     }
-
-
 }

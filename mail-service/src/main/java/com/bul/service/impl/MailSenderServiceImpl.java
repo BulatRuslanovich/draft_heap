@@ -2,11 +2,13 @@ package com.bul.service.impl;
 
 import com.bul.dto.MailParams;
 import com.bul.service.MailSenderService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+@RequiredArgsConstructor
 @Service
 public class MailSenderServiceImpl implements MailSenderService {
     private final JavaMailSender javaMailSender;
@@ -14,10 +16,6 @@ public class MailSenderServiceImpl implements MailSenderService {
     private String emailFrom;
     @Value("${service.activation.uri}")
     private String activationServiceUri;
-
-    public MailSenderServiceImpl(JavaMailSender javaMailSender) {
-        this.javaMailSender = javaMailSender;
-    }
 
     @Override
     public void send(MailParams mailParams) {

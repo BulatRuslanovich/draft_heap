@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/changeset/create-app-photo.yaml
   - include:
       file: db/changelog/changeset/create-app-sticker.yaml
+  - include:
+      file: db/changelog/changeset/add-email-index-app-user.yaml
